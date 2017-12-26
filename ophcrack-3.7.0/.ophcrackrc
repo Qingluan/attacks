@@ -1,0 +1,6 @@
+nthreads 1
+nhredux 50000
+maxdqueue 500
+bforce 1
+hideuname 0
+auditmode 0

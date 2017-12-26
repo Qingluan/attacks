@@ -1,0 +1,138 @@
+#!/bin/bash
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+CYAN='\033[0;35m'
+RED='\033[0;31m'
+YELLOW='\033[0;36m'
+NC='\033[0m'
+NMAP_PLUGIN_DIR="/opt/support/nmap";
+
+function msg () {
+	read arg <<< "$*"
+	if [ $# -eq 2 ]
+	then
+		if [[ $1 = *[!0-9]* ]]
+		then
+			printf " [${GREEN}%s${GREEN}${NC}] ${NC}%s\n" $1 $2
+		else
+			if [ $1 -eq 0 ]
+			then
+				printf " [${GREEN}Run${GREEN}] ${NC}%s\n" $2
+			else
+				printf " [${RED}Fail${RED}] ${NC}%s\n" $2
+			fi
+		fi
+        else
+		printf " [${YELLOW}+${YELLOW}${NC}]%s\n" "$*"
+	fi
+}
+
+if [[ $1 == "list" ]];then
+	ls $NMAP_PLUGIN_DIR;
+	exit 0;
+fi
+
+### pytho8n area
+##############################################################
+CMD=$(cat << EOF | python
+import os
+import sys
+args="$*".split()
+
+if args[0] == "-h" or args[0] == "help" or args[0] == "--help":
+	print("help")
+	sys.exit(0)
+
+if args[0] == "Auto":
+	print("auto")
+	sys.exit(0)
+elif args[0] == 'Service':
+	print("service")
+	sys.exit(0)
+
+scripts=os.listdir("$NMAP_PLUGIN_DIR")
+for s in scripts:
+    if "$1" in s:
+        print("--script " + s + " " + ' '.join(args[1:]))
+        sys.exit(0)
+
+
+
+print(" ".join(args))
+EOF)
+
+IP=$(cat	<< EOF | python 
+import	re
+args="$*".split()
+cap=re.compile(r'^((?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?)$')
+for arg in args:
+    if cap.match(arg):
+        print(arg)
+        break
+EOF)
+
+function host_format(){
+cat << EOF | python
+import re
+cap=re.compile(r'((?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?)')
+
+msg="""$*""".split("\n")
+result={}
+
+def L(f,m,l):
+    print("$GREEN" + "[" + "$RED",f,"$GREEN" + "]" + "$GREEN",m,"$YELLOW",l,"$NC")
+
+for i,v in enumerate(msg):
+    if "Nmap scan report for" in v:
+        L("+",cap.findall(v)[0] ,msg[i+1])
+
+    if "PORT" in v:
+        res = msg[i:]
+        for l in res:
+        	ll = l.split()
+        	if len(ll) >= 3:
+        		L(ll[0], ll[1], " ".join(ll[2:]))
+        	else:
+        		L("+",l,"")
+    elif "|" in v or ":" in v:
+        L("->", v, "")
+EOF
+}
+
+#########       end      
+# echo $CMD;
+# echo $IP;
+if [[ $CMD == "help" ]];then
+	msg " nmap help + nmap-enhance help"
+	nmap -h
+	msg "[module] ip/host "
+	msg "list     list all nmap module"
+	msg "auto     include nmap host discover and port scan"
+	msg "service. include nmap service discover and os scan"
+	exit 0
+fi
+
+
+if [[ $CMD == "auto" ]];then
+	msg "host discover"
+	host_format "$(nmap -T4 -sn 	$IP)"
+	msg "port discover"
+	host_format "$(nmap -T4 $IP)"
+	msg "Geo location"
+	host_format "$(nmap -T4 -sn  --script ip-geolocation-maxmind.nse  $IP)"
+	exit 0;
+fi
+
+if [[ $CMD == "service" ]];then
+	msg "service discover"
+	nmap -T4 -sV $IP
+	msg "OS discover"
+	nmap -T4 -O $IP
+	exit 0;
+fi
+
+msg "cmd : " $CMD
+nmap $CMD
+
+
+

@@ -1,0 +1,7 @@
+#!/bin/bash
+echo "taobao"
+curl http://ip.taobao.com/service/getIpInfo.php?ip=$1
+
+echo "ipinfo"
+
+curl http://ipinfo.io/$1

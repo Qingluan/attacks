@@ -1,0 +1,102 @@
+#!/bin/bash
+# this is attack script generate by Halo;
+# you can edit this;
+
+function usage {
+echo  "Usage: H [options] term1 [term2] ... [termN]                                         "
+echo  "  ==========                                                                         "
+echo  "   Examples                                                                          "
+echo  "  ==========                                                                         "                                                                                           
+echo  "                                                                                     "
+echo  "  =========                                                                          "
+echo  "   Options                                                                           "
+echo  "  =========                                                                          "
+echo  "     -h, --help                              Show this help screen.                  "
+echo  "     -c, --create                            create a target , "
+echo  "  ========================== Payload ===========================================     "
+echo  "      -x, --xxx 	                          xxxxxxx                                   "
+
+}
+
+
+ATTACK_HOME=/opt/attacks;
+PRO_HOME=$ATTACK_HOME/discover/;
+PRO_RES=$PRO_HOME/res/;
+PTAR_NAME="";
+
+function create {
+    mkdir -p $PRO_RES/$1;
+    msg "Createing $1";
+    PTAR_NAME="$1";
+}
+
+function edit {
+for f in $(find $PRO_RES -name "*$1*" -type d); do
+  vi $f/info;
+done
+}
+
+function show {
+for f in $(find $PRO_RES -name "*$1*" -type d); do
+  msg "---------------------  $f " 
+  cat $f/info
+done
+}
+
+
+function run_py3 {
+    msg "host:"
+    read host;
+    msg "ip:"
+    read ip;
+    geo="";
+    if [[ $ip != "" ]];then
+    	geo="$(geoiplookup $ip | grep Ci | awk -F , '{ print $4,$5}')"	
+    fi
+    cat << EOF3 | python
+#!/usr/bin/env python3
+with open("$PTAR_NAME/info", "w") as fp:
+    print("host: ", "$host", file=fp)
+    print("ip: ", "$ip", file=fp)
+    if "$geo" != "":
+        print("geo:", "$geo", file=fp)
+EOF3
+   
+
+}
+
+function msg {
+    read -a  arg <<< "$*";
+    # echo discover
+    # echo 1
+    if [ $# -eq 2 ];
+    then
+        if [[ $1 == *[!0-9]*  ]];then
+            printf " \033[0;32m[+\033[0;32m]\033[0m \033[0m%s\n"   "$*";
+        else
+            if [ $1 -eq 0 ];then
+                printf " \033[0;32m[Run\033[0;32m] \033[0m%s\n"   "$2";
+            else
+                printf " \033[0;31m[Fail\033[0;31m] \033[0m%s\n"   "$2"; 
+            fi
+        fi
+    else
+        printf " \033[0;34m[+\033[0;34m] \033[0;36m%s\033[0m\n"   "$*";
+    fi
+}
+
+
+ARGS="$*";
+if [[ $ARGS != "" ]];then
+  while getopts "e:s:c:h:" arg ${ARGS} ; do
+    if [[ "${arg}" = "?" ]]; then
+      usage >&2;
+    fi     
+    case ${arg} in
+      h) usage >&2;;
+      c) create $OPTARG && run_py3;;
+      s) show $OPTARG ;;
+      e) edit $OPTARG ;;
+    esac   
+  done     
+fi

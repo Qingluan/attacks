@@ -1,0 +1,223 @@
+#!/bin/zsh
+
+ROOT_PATH="/opt/attacks/attack-halo-backup/vps_manager/";
+source /opt/attacks/attack-halo-backup/vps_manager/env;
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+CYAN='\033[0;35m'
+RED='\033[0;31m'
+YELLOW='\033[0;36m'
+NC='\033[0m'
+ 
+
+function usage {
+    echo "  -l   list host in server.list"
+    echo "  -c   change vps install tool, exm: -c  , will sed -i s/yum/apt/ or reverse"
+    echo "  -a   add a host to server.list "
+}
+
+function list_vpn {
+    vps-man vpn_status -R $1;
+}
+
+function config_ipsec {
+cat > /etc/ipsec.conf <<EOF
+# ipsec.conf - strongSwan IPsec configuration file
+
+# basic configuration
+
+config setup
+  # strictcrlpolicy=yes
+  # uniqueids = no
+
+# Add connections here.
+
+# Sample VPN connections
+
+conn %default
+  ikelifetime=60m
+  keylife=20m
+  rekeymargin=3m
+  keyingtries=1
+  keyexchange=ikev1
+  authby=secret
+  ike=aes128-sha1-modp1024,3des-sha1-modp1024!
+  esp=aes128-sha1-modp1024,3des-sha1-modp1024!
+
+conn myvpn
+  keyexchange=ikev1
+  left=%defaultroute
+  auto=add
+  authby=secret
+  type=transport
+  leftprotoport=17/1701
+  rightprotoport=17/1701
+  right=$VPN_SERVER_IP
+EOF
+
+cat > /etc/ipsec.secrets <<EOF
+: PSK "$VPN_IPSEC_PSK"
+EOF
+
+chmod 600 /etc/ipsec.secrets
+
+}
+
+
+function config_xl2tp {
+cat > /etc/xl2tpd/xl2tpd.conf <<EOF
+[lac myvpn]
+lns = $VPN_SERVER_IP
+ppp debug = yes
+pppoptfile = /etc/ppp/options.l2tpd.client
+length bit = yes
+EOF
+
+cat > /etc/ppp/options.l2tpd.client <<EOF
+ipcp-accept-local
+ipcp-accept-remote
+refuse-eap
+require-chap
+noccp
+noauth
+mtu 1280
+mru 1280
+noipdefault
+defaultroute
+usepeerdns
+connect-delay 5000
+name $VPN_USER
+password $VPN_PASSWORD
+EOF
+
+chmod 600 /etc/ppp/options.l2tpd.client
+
+}
+
+
+
+
+function start_vpn {
+    KEY=$1;
+    echo -n "server ip:"
+    VPN_SERVER_IP=$(cat << EOF | python
+from configparser import ConfigParser
+con = ConfigParser()
+con.read("$ROOT_PATH/account.ini")
+print con.get("$1", "Server IP")
+EOF
+)
+    echo "$VPN_SERVER_IP";
+
+    echo -n "ipsec psk:";
+    VPN_IPSEC_PSK=$(cat << EOF | python
+from configparser import ConfigParser
+con = ConfigParser()
+con.read("$ROOT_PATH/account.ini")
+print con.get("$1", "IPsec PSK")
+EOF
+)
+    echo $VPN_IPSEC_PSK
+
+    echo -n "user name:"
+    VPN_USER=$(cat << EOF | python
+from configparser import ConfigParser
+con = ConfigParser()
+con.read("$ROOT_PATH/account.ini")
+print con.get("$1", "Username")
+EOF
+)
+    echo $VPN_USER;
+
+    echo -n "password :"
+    VPN_PASSWORD=$(cat << EOF | python
+from configparser import ConfigParser
+con = ConfigParser()
+con.read("$ROOT_PATH/account.ini")
+print con.get("$1", "Password")
+EOF
+)
+    echo $VPN_PASSWORD
+
+    
+    config_ipsec;
+    if [ $? -eq 0 ];then
+       echo "ipsec config ok";
+    else
+	    echo "ipsec config failed";
+	    exit 1;
+    fi
+    config_xl2tp;
+
+    if [ $? -eq 0 ];then
+       echo "xl2tp config ok";
+    else
+	    echo "xl2tp config failed";
+	    exit 1;
+    fi
+    
+    mkdir -p /var/run/xl2tpd
+    touch /var/run/xl2tpd/l2tp-control
+
+    service strongswan restart
+    service xl2tpd restart
+
+
+    # Ubuntu & Debian
+    echo "$GREEN ============= info ===============";
+    if [[ $(ipsec status | grep myvpn) == "" ]];then
+    	ipsec up myvpn 
+    else
+	ipsec down myvpn && ipsec up myvpn
+    fi
+    echo "============== end ===============$NC";
+    #
+    # # CentOS/RHEL & Fedora
+
+    echo "c myvpn" > /var/run/xl2tpd/l2tp-control;
+    VIA_IP=$(ip route | grep via | awk '{print $3}');
+    echo -n "$BLUE # find default via $NC"
+    echo "$YELLOW $VIA_IP";
+    route add $VPN_SERVER_IP gw $VIA_IP;
+
+    sleep 1
+    if [[ $(ifconfig | grep ppp0) == "" ]];then
+	    echo "$RED ppp0 vpn tunnel not connect successfuly!$NC"
+	   
+    fi
+    route add default dev ppp0
+    echo -n "public ip: $GREEN"
+    wget -qO- http://ipv4.icanhazip.com; echo
+    echo "$NC"
+}
+
+
+while getopts "lhs:ka:cL:k" arg ${ARGS} ; do
+    if [[ "${arg}" = "?" ]]; then
+      usage >&2;
+    fi     
+    case ${arg} in
+      L) list_vpn $OPTARG;;
+      l) vps-man list;;
+      k) 
+	      route del default dev ppp0;
+	      echo "d myvpn" > /var/run/xl2tpd/l2tp-control;
+	      ipsec down myvpn ;
+	      route del $(ip route show | grep via | grep -v default | awk '{print $1}') ;;
+
+
+      s) start_vpn $OPTARG;;
+      h) usage >&2;;
+      c)   
+  	 if [[ $(grep "apt-get" vpn-deploy.py) == "" ]];then
+            sed -i 's/apt-get/yum/' vpn-deploy.py; 
+         else
+            sed -i 's/yum/apt-get/' vpn-deploy.py; 
+         fi
+      	;;    
+      a)   
+           PRO_NAME="$OPTARG";
+         echo  $PRO_NAME  >> /opt/attacks/attack-halo-backup/vps_manager/server.list ;;
+    esac   
+done     
+

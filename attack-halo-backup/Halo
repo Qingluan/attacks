@@ -1,0 +1,379 @@
+#!/bin/bash
+
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+CYAN='\033[0;35m'
+RED='\033[0;31m'
+YELLOW='\033[0;36m' 
+NC='\033[0m'
+
+
+ARGS="-"
+SERVICE=0;
+SWITCH=0;
+SSHPORT="22";
+SSHUSER="root";
+MAP_OPT="";
+COPY_ARGS="";
+TO="";
+COPY=0;
+BUILD=0;
+CONTENT="";
+CONNECT_IF=0;
+CONNECT_ARGS="";
+INSTALL=0;
+PACKAGE="";
+ATTACH_TARGET="";
+ATTACK=0;
+DDOS=0;
+GOT_SERVICES=0;
+EXP=0;
+RUN_EXP=0;
+PAYLOAD="";
+PAYLOAD_LIST=0;
+ATTACK_PACK_PATH=/opt/attacks
+new_port="";
+
+
+
+
+
+function  usage {
+  echo "  Usage: H [options] term1 [term2] ... [termN]"
+  echo    
+  echo "=========="
+  echo " Examples "
+  echo "=========="                                                                                                                                                                  
+  echo    
+  echo "========="
+  echo " Options "
+  echo "========="
+  echo "   -c, --gitclone   [repo]       git clone a repo form git hub "
+  echo "   -h, --help                    Show this help screen."
+  echo "   -k, --keyboard help           Show console operate help."
+  echo "   -s, --seacher in google       Show console operate help."
+  echo "========================== Payload ==========================================="
+  echo "    -l, --list-payload 					 list all payloads"
+  echo "    -g, --generate  					 generate a attacker project "
+  echo "    info  					 show a attacker project "
+  
+  
+}
+
+function keyboard_help {
+
+   echo "1. 移动光标快捷键"
+   echo "ctrl+f 向前移动一个字符"
+   echo "ctrl+b 向后移动一个字符"
+   echo "alt+f 向前移动一个单词"
+   echo "alt+b 向后移动一个单词"
+   echo "ctrl+a 移动到当前行首"
+   echo "ctrl+e 移动到当前行尾"
+   echo "ctrl+l 清屏，并在屏幕最上面开始一个新行"
+
+
+   echo "2. 编辑命令行快捷键"
+   echo "ctrl+d 删除当前的字符"
+   echo "ctrl+t 交换当前字符和前一个字符的位置"
+   echo "alt+t 交换当前单词和前一个单词的位置"
+   echo "alt+u 把当前单词变成大写"
+   echo "alt+l 把当前单词变成小写"
+   echo "alt+c 把当前单词变成首字母大写的单词"
+   echo "ctrl+v 添加一个特殊字符，例如，要添加一个制表符，按ctrl+v+tab "
+
+
+   echo "3. 剪切、粘贴快捷键"
+   echo "ctrl+k 剪切文本直到行的末尾"
+   echo "ctrl+u 剪切文本直到行的起始"
+   echo "ctrl+w 剪切光标前的单词"
+   echo "alt+d 剪切光标后的单词"
+   echo "ctrl+y 粘贴最近剪切的文本"
+   echo "alt+y 回退到先前剪切的文本并粘贴它"
+   echo "ctrl+c 删除整行"
+   
+}
+
+function git_clone {
+  cd /opt/attacks &&  git clone $1 ;
+}
+
+function generate_attack {
+    msg "generate ready ..." "$ATTACK_PACK_PATH/$1";
+    if [ -d "$ATTACK_PACK_PATH/$1" ];then
+	    msg 1 "this pro is exist";
+	    exit 0;
+    fi
+    mkdir -p "$ATTACK_PACK_PATH/$1";
+    mkdir -p "$ATTACK_PACK_PATH/$1/res";
+
+    file_base_content="$(cat << EOF
+#!/bin/bash
+# this is attack script generate by Halo;
+# you can edit this;
+
+function usage {
+echo  "Usage: H [options] term1 [term2] ... [termN]                                         "
+echo  "  ==========                                                                         "
+echo  "   Examples                                                                          "
+echo  "  ==========                                                                         "                                                                                           
+echo  "                                                                                     "
+echo  "  =========                                                                          "
+echo  "   Options                                                                           "
+echo  "  =========                                                                          "
+echo  "     -h, --help                              Show this help screen.                  "
+echo  "  ========================== Payload ===========================================     "
+echo  "      -x, --xxx 	                          xxxxxxx                                   "
+
+}
+
+
+ATTACK_HOME=$ATTACK_PACK_PATH;
+PRO_HOME=\$ATTACK_HOME/$1/;
+PRO_RES=\$PRO_HOME/res/;
+
+
+function run_py2 {
+    cat << EOF2 | python
+#!/usr/bin/env python2
+\$*
+EOF2
+
+}
+
+function run_py3 {
+    cat << EOF3 | python
+#!/usr/bin/env python3
+\$*
+EOF3
+}
+
+function msg {
+    read -a  arg <<< "\$*";
+    # echo $*
+    # echo $#
+    if [ \$# -eq 2 ];
+    then
+        if [[ \$1 == *[!0-9]*  ]];then
+            printf " ${GREEN}[+${GREEN}]${NC} ${NC}%s\n"   "\$*";
+        else
+            if [ \$1 -eq 0 ];then
+                printf " ${GREEN}[Run${GREEN}] ${NC}%s\n"   "\$2";
+            else
+                printf " ${RED}[Fail${RED}] ${NC}%s\n"   "\$2"; 
+            fi
+        fi
+    else
+        printf " ${BLUE}[+${BLUE}] ${YELLOW}%s${NC}\n"   "\$*";
+    fi
+}
+
+
+EOF
+)"
+
+
+
+
+
+    printf "%s\n" "$file_base_content" > $ATTACK_PACK_PATH/$1/run && chmod +x $ATTACK_PACK_PATH/$1/run ;
+    echo  'ARGS="$*";' >> $ATTACK_PACK_PATH/$1/run;
+    echo  'if [[ $ARGS != "" ]];then' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '  while getopts "h:" arg ${ARGS} ; do' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '    if [[ "${arg}" = "?" ]]; then' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '      usage >&2;' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '    fi     ' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '    case ${arg} in' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '      h) usage >&2;;' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '    esac   ' >> $ATTACK_PACK_PATH/$1/run;
+    echo  '  done     ' >> $ATTACK_PACK_PATH/$1/run;
+    echo  'fi' >> $ATTACK_PACK_PATH/$1/run;
+    msg 1, "create ok"
+    	
+}
+
+function msg {
+    read -a  arg <<< "$*";
+    # echo $*
+    # echo $#
+    if [ $# -eq 2 ];
+    then
+        if [[ $1 == *[!0-9]*  ]];then
+            printf " ${GREEN}[+${GREEN}]${NC} ${NC}%s\n"   "$*";
+        else
+            if [ $1 -eq 0 ];then
+                printf " ${GREEN}[Run${GREEN}] ${NC}%s\n"   "$2";
+            else
+                printf " ${RED}[Fail${RED}] ${NC}%s\n"   "$2"; 
+            fi
+        fi
+    else
+        printf " ${BLUE}[+${BLUE}] ${YELLOW}%s${NC}\n"   "$*";
+    fi
+}
+
+function err {
+    printf " ${RED}[err${RED}] ${NC}%s\n"   $*;
+}
+
+function result {
+    if [ $? -eq 0 ];then
+
+        printf " [${BLUE}Result${BLUE}] ${GREEN}successful!${GREEN} ${NC}\n";   
+    else
+        printf " [${BLUE}Result${BLUE}] ${YELLOW} %s ${YELLOW} ${NC}\n" $?;   
+    fi
+}
+
+function test_soft {
+    $1 -h 1>/dev/null  2>/dev/null;
+    if [ $? -eq 0 ];then
+        msg $1
+    else
+        msg "Attack" $1
+    fi
+
+}
+
+function list_payload {
+		PAYS="$(find /opt/attacks -maxdepth 1 -mindepth 1 -type d)";
+cat << EOF | python
+pays = """$PAYS""".split()
+for p in pays:
+    print(p)
+
+EOF
+#		msg "list" $PAYS;
+}
+
+function info_payload {
+	find_payload $2;
+	for f in $PAYLOAD;do
+			ss=$(head -n 1 $f/README.*);
+			IFS=/ read -r -a names <<< $f;
+			msg ${names[@]:${#names}-1} "found"
+			printf  "$BLUE$ss$NC";
+	done
+}
+
+
+function switch_proxychains {
+	osx=$(uname);
+	old_port=$( grep "^sock.*\d$" /usr/local/etc/proxychains.conf | awk '{ print $3}');
+	if [[ $osx == "Darwin" ]];then
+			sed -ie "s/$old_port/${new_port}/g" /usr/local/etc/proxychains.conf ;
+	else
+			sed -i "s/$old_port/${new_port}/g" /usr/local/etc/proxychains.conf ;
+
+	fi
+	msg "to "  "$new_port"
+}
+
+function find_payload {
+		PAYS="$(find /opt/attacks -maxdepth 1 -mindepth 1 -type d )";
+		F=$1;
+		#cat << EOF | python
+		PAYLOAD=$( cat << EOF | python
+#!/bin/env python
+files="""$PAYS
+"""
+d=""
+for f in files.split():
+    #print(f)
+    if f.find("$F".strip()) >0:
+        d += " " + f.strip()
+print(d)
+
+EOF
+)
+
+#		for p in  $PAYLOAD;do
+#				IFS=/ read -r -a names <<< $p;
+#				msg ${names[@]:${#names}-1} $p
+#		done
+}
+
+
+function git_package {
+		cd $ATTACK_PACK_PATH;
+#		IFS=/ read -r -a names <<< $1
+		
+		git clone $1
+		dir_name=$(cat  << EOF | python 
+#!/usr/bin/env python
+name="$1".split("/").pop()
+if ".git" in name:
+    print name.split(".")[0]
+else:
+    print name
+
+EOF)
+
+		cd $dir_name;
+		printf "$BLUE `ls .` $NC\n"
+		printf "$GREEN which file to run$NC\n>"
+		read -r file
+		cp $file run && chmod +x run
+		cat << EOF >> ENV
+source /home/moriaty/
+EOF
+
+		vi ENV
+
+}
+
+function search_google {
+	$ATTACK_PACK_PATH/attack-halo-backup/seacher -s 
+}
+
+
+ARGS=$@;
+for p in $@;do
+	if [[ $p == "help" ]];then
+					usage;
+	elif [[ $p == "list" ]];then
+					list_payload;
+	elif [[ $p == "info" ]];then
+					info_payload $ARGS;
+	elif [[ $p == "install" ]];then
+					read -r -a hh <<< $ARGS;
+					git_package ${hh[@]:1};
+	else
+					find_payload $1;
+					if [[ $PAYLOAD != "" ]];then
+							IFS=/ read -r -a names <<< $PAYLOAD;
+							cd $PAYLOAD;
+							if [ -f ENV ];then
+							  source ENV;
+							fi
+							read -r -a s <<< "$@"
+							./run  ${s[@]:1}
+							msg $? $PAYLOAD
+					else
+							continue
+
+					fi
+	fi
+	break
+done
+
+ARGS="$*";
+
+if [[ $ARGS != "" ]];then
+  while getopts "lhskg:c:" arg ${ARGS} ; do
+    if [[ "${arg}" = "?" ]]; then
+      usage >&2;
+    fi     
+    case ${arg} in
+      l) list_payload;;
+      h) usage >&2;;
+      k) keyboard_help >&2;;
+      s) search_google >&2;;
+      c)   
+           GIT_NAME="$OPTARG";
+         git_clone  $GIT_NAME;;
+      g)   
+           PRO_NAME="$OPTARG";
+        generate_attack $PRO_NAME;;
+    esac   
+  done     
+  fi

@@ -1,0 +1,115 @@
+#!/bin/bash
+# this is attack script generate by Halo;
+# you can edit this;
+
+function usage {
+echo  "Usage: H [options] term1 [term2] ... [termN]                                         "
+echo  "  ==========                                                                         "
+echo  "   Examples                                                                          "
+echo  "  ==========                                                                         "                                                                                           
+echo  "                                                                                     "
+echo  "  =========                                                                          "
+echo  "   Options                                                                           "
+echo  "  =========                                                                          "
+echo  "     -h, --help                              Show this help screen.                  "
+echo  "     -a, --add                               add host to hosts"
+echo  "     -b, --bak                               recover the hosts "
+echo  "     -l, --list                              list bak files "
+echo  "  ========================== Payload ===========================================     "
+echo  "      -x, --xxx 	                          xxxxxxx                                   "
+
+}
+
+
+ATTACK_HOME=/opt/attacks;
+PRO_HOME=$ATTACK_HOME/host-switch/;
+PRO_RES=$PRO_HOME/res/;
+
+
+function add {
+echo -n "host:"
+read host1;
+echo -n  "ip:"
+read ip1;
+cp /etc/hosts "$PRO_RES/$host1";
+echo "$ip1    $host1" >> /etc/hosts;
+
+}
+
+function list {
+	ls $PRO_RES;
+}
+
+function bak {
+	ar=$1
+	f="$(cat << EOF | python 
+import os
+for f in os.listdir("$PRO_RES"):
+    if "$ar" in f:
+        print(f)
+        break	
+EOF
+)"
+
+msg "recover  $f -> /etc/hosts?  ";
+echo -n "[y/n]:"
+read op;
+if [[ $op == 'y' ]];then
+ cp $PRO_RES/$f /etc/hosts;
+fi
+
+msg $? " [ok]"
+
+}
+
+function run_py2 {
+    cat << EOF2 | python
+#!/usr/bin/env python2
+$*
+EOF2
+
+}
+
+function run_py3 {
+    cat << EOF3 | python
+#!/usr/bin/env python3
+$*
+EOF3
+}
+
+function msg {
+    read -a  arg <<< "$*";
+    # echo host-switch
+    # echo 1
+    if [ $# -eq 2 ];
+    then
+        if [[ $1 == *[!0-9]*  ]];then
+            printf " \033[0;32m[+\033[0;32m]\033[0m \033[0m%s\n"   "$*";
+        else
+            if [ $1 -eq 0 ];then
+                printf " \033[0;32m[Run\033[0;32m] \033[0m%s\n"   "$2";
+            else
+                printf " \033[0;31m[Fail\033[0;31m] \033[0m%s\n"   "$2"; 
+            fi
+        fi
+    else
+        printf " \033[0;34m[+\033[0;34m] \033[0;36m%s\033[0m\n"   "$*";
+    fi
+}
+
+
+ARGS="$*";
+if [[ $ARGS != "" ]];then
+  while getopts "lhb:a" arg ${ARGS} ; do
+    if [[ "${arg}" = "?" ]]; then
+      usage >&2;
+    fi     
+    case ${arg} in
+      h) usage >&2;;
+      l) list;;
+      a) add ;;
+      b) bak ;;
+      h) usage >&2;;
+    esac   
+  done     
+fi

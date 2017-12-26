@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo "dependences .. "
+apt install -y python3 python3-pip
+apt install -y zsh
+apt install -y strongswan xl2tpd
+
+echo "install python dependences"
+pip3 install SocialKit
+pip3 install mroylib-min
+pip3 install fabric3
+
+
+echo "install scripts"
+cp Halo /usr/local/bin/
+cp vps_manager/vpn /usr/local/bin/
+

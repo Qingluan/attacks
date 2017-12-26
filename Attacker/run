@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import os, json, re
+from qlib import log
+
+RUNER_LIST = [
+    'python3'
+    'python',
+    'ruby',
+    'perl',
+    'pl',
+    'bash',
+    'sh',
+    'php',
+]
+
+
+def search(*args):
+    res = json.loads(os.popen("exp-s -j " + " ".join(args)).read())
+    log.show(res['SEARCH'])
+    for r in res['RESULTS']:
+        log.show(r['Exploit'])
+        yield r['EDB-ID'],r['Path']
+
+
+
+
+def detect(path):
+    RUNER = None
+    content = None
+    head = None
+
+    def python_detect_dependences(RUNER,content):
+        pip = 'pip2'
+        if RUNER == "python3":
+            pip = 'pip3'
+
+
+    with open(path) as fp:
+        content = fp.read()
+        head = content.split("\n")[:5]
+    for l in head:
+        if "#!/" in  l:
+            for r in RUNER_LIST:
+                if r in l:
+                    RUNER = r
+
+    if RUNER == 'python3':
+

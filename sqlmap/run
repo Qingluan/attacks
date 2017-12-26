@@ -1,0 +1,4 @@
+#!/bin/bash
+
+source $HOME/py2/bin/activate
+sqlmap $*

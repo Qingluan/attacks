@@ -1,0 +1,23 @@
+[0]
+Server IP= 47.90.241.209
+IPsec PSK= xjmfbJ3WywKKXaKu
+Username= vpnuser
+Password= VTSfrfcGnpamgbTF
+
+[1]
+Server IP= 47.91.40.66
+IPsec PSK= vHUpuTMbqqufEiyk
+Username= vpnuser
+Password= YpiZ2w52X9ofiCaz
+
+[2]
+Server IP= 47.89.241.235
+IPsec PSK= wGgFqJ9CxXe6MsbK
+Username= vpnuser
+Password= 7CYtv2KCPYoVJnch
+
+[3]
+Server IP= 47.74.21.29
+IPsec PSK= bArESkUhnNDmGpu9
+Username= vpnuser
+Password= 7kSsNAuNk4p6eBBU

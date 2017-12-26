@@ -1,0 +1,789 @@
+#!/usr/bin/env python3
+from SocialKit.libs import clound_get, async_clound_get
+from SocialKit.parser import XmlParser
+from SocialKit.log import L, show, colored, LogControl
+from SocialKit.log import logging
+from SocialKit.phantomjs import WebDriver
+from qlib.asyn import Exe
+from qlib.net import to
+from qlib.log import show
+from qlib.data.sql import SqlEngine
+from qlib.data.stream import passpack, passunpack
+from qlib.io import GeneratorApi
+from qlib.text import mark
+from mroylib.services.service import  net_patch
+import json, re, time
+import logging
+import urllib.request as ur
+from hashlib import md5
+from json import dumps
+from qlib.net import to
+from qlib.asyn import Exe
+from qlib.data.stream import lfsr, passunpack
+from pyquery import PyQuery as pq
+from urllib.parse import urlencode
+import os, json, time, re
+from  bs4.element import Tag
+from chardet import detect
+from lxml.html import HtmlElement
+import sys, random, webbrowser
+from chardet import detect
+from cmd import Cmd
+from termcolor import colored, cprint
+remote_url = None
+GOT_IMG_RE = re.compile(r'(http[s]?://[\w\.\?\!\;\=\-\/]+?\.(?:png|jpg))')
+agent='Opera/9.61 (Windows NT 5.1; U; zh-cn) Presto/2.1.1'
+
+
+# def _check(url):
+#     try:
+#         show('check -> ',url_files)
+#         if ur.urlopen('http://'+url+"/urlapi").code == 200:
+#             return True
+#     except Exception as e:
+#         return False
+#     return False
+sql = SqlEngine(database='./db.sql')
+try:
+   # sql.create('db',msg=str)
+    #sql.create('web', msg=str)
+    pass
+except Exception as e:
+    pass
+
+uploadpass = b'fuck this guy'
+
+"""
+
+        single account:
+        {
+            'url':'https://www.facebook.com',
+            'actions':[
+                {
+                    'vec':'email',
+                    'msg':self.user,
+                    'by': 'id'
+                },
+                {
+                    'vec':'pass',
+                    'msg':self.passwd,
+                    'by': 'id'
+                },
+            ]
+        }
+
+        mul:
+        self.login = {
+            'url':'https://www.facebook.com',
+            'actions':{
+                mul:[
+                    [{
+                        'vec':'email',
+                        'msg':self.user,
+                        'by': 'id'
+                    },
+                    {
+                        'vec':'pass',
+                        'msg':self.passwd,
+                        'by': 'id'
+                    },]
+                    .[]
+                    .[]
+                    .[]
+                ]
+            }
+        }
+
+"""
+
+def each_line(*files):
+    try:
+        fs = []
+        for f in files:
+            fs.append(open(f))
+        # with open(f) as fp:
+        val = []
+        if_close = []
+        # print(fs)
+        while 1:
+            for fp in fs:
+                # print()
+                l = fp.readline()
+                # print('this',l)
+                if  l.strip():
+                    val.append(l.strip())
+                else:
+                    # print("tjhis")
+                    if_close.append(1)
+                    fp.close()
+                    fs.remove(fp)
+            if val:
+                yield tuple(val)
+            else:
+                break
+            val = []
+            if len(if_close) == len(files):
+                break
+    finally:
+        for f in fs:
+            f.close()
+
+
+class RemoteApi:
+    """
+        @method: requests/browser
+    """
+    def __init__(self,  proxy=None):
+        #self.api_url = os.path.join(remopte_url, 'urlapi')
+        self.proxy = proxy
+
+    def get(self, url, method='requests', first=None):
+        """
+        @method: requests/browser
+        """
+        try:
+            res = to(url)
+        except Exception as e:
+            return None
+
+        if len(res.content) > 2000:
+            encoding = detect(res.content[:2000])['encoding']
+        else:
+            encoding = detect(res.content)['encoding']
+        return XmlParser(res.content.decode(encoding, 'ignore'))
+        # # if isinstance(url, list):
+        # #   return async_clound_get(self.api_url, url, method, spider_proxy=self.proxy)
+        # else:
+        # if first:
+            # first = passpack(uploadpass, first)
+        #options = passpack( uploadpass,{
+         #   'agent':True,
+        #})
+        # res = clound_get(self.api_url, url, method=method,pack=lambda x: passpack(uploadpass,x) , first=first, options=options.decode('utf8'))
+        # if 'data' in res:
+            # return XmlParser(res['data'])
+        # else:
+            # return None
+
+    # def gets(self, urls, method='requests', first=None):
+        # url = ' '.join(urls)
+
+
+
+
+
+class Google:
+    def __init__(self, driver=None, proxy=None):
+        self.google_url = "https://www.google.com/search?"
+        self._mode = 'text'
+        self.base_key = {
+            "num":100,
+            "start":0,
+            "meta":"",
+            "hl":"en",
+            "q": None,
+        }
+        if driver:
+            self.web = driver
+        else:
+            self.web = WebDriver(proxy=proxy)
+
+    @property
+    def mode(self):
+        return self._mode
+    
+    @mode.setter
+    def mode(self, v):
+        self._mode = v
+
+    def parse_time(self, timestr):
+        # time.strptime("2017-9-12",
+        formats = (
+            "%Y-%m-%d",
+            "%m/%d/%Y",
+        )
+
+        if 'H' in timestr:
+            return 'qdr:h'
+        elif 'D' in timestr:
+            return 'qdr:d'
+        elif 'M' in timestr:
+            return 'qdr:m'
+        elif 'Y' in timestr:
+            return 'qdr:y'
+        else:
+            for i in formats:
+                try:
+                    start,end = timestr.split()
+                    st = time.strftime("%m/%d/%Y", time.strptime(start,i))
+                    ed = time.strftime("%m/%d/%Y", time.strptime(end,i))
+                    return 'cdr:1,cd_min:{mi},cd_max:{ma}'.format(mi=st, ma=ed)
+                    
+                except ValueError as e:
+                    cprint("error timestamp format ",'red')
+                    return ''
+
+
+    def search(self, key, time=None):
+        base_key = self.base_key
+        base_key['q'] = key
+        base_key['num'] = 100
+        if time:
+            rrr = self.parse_time(time)
+            if rrr:
+                base_key['tbs'] = rrr
+                del base_key['num']
+        if self.mode == 'image':
+            base_key['tbm'] = 'isch'
+            
+        url = self.google_url + urlencode(base_key)
+        res = self.web.get(url)
+        
+        if not res:
+            return []
+        if self.mode == 'text':
+            return [GoogleMsg(pq(i)) for i in res("div.g")]
+        elif self.mode == 'image':
+            return [GoogleMsg(pq(i)) for i in res("div.rg_di.rg_bx.rg_el.ivg-i")]
+
+
+class GoogleMsg:
+
+    def __init__(self, i):
+
+        self.href = i("h3.r>a").attr('href')
+        self.name = i("h3 > a").text()
+        if i("div.img-brk").text():
+            self.text = ' Images Boxes'
+        elif self.href and self.name:
+            self.text = i.text().replace(self.href,'').replace(self.name,'')
+        else:
+            self.text = i.text()
+
+        self.imgs = ''.join(['<img class="img-circle" src="{src}" style="height:50px;width:50px" ></img>'.format(src=im) for im in self.extract_img(i)])
+        # self.find_msg = copy(self.text)
+    def extract_img(self, i):
+        return GOT_IMG_RE.findall(i.html())
+
+    def to_msg(self):
+        t = """
+            <div>
+            <span id='title-span' style="border-left-color: rgba(209, 86, 104, 0.92);border-left-width: 7px;background-color:#f3f3f3; ">
+                <a href="{href}" >{con}</a>
+            </span>
+                <div style="font-weight: 100;">{content}</div>
+                <div class='content-imgs' >
+                    {img}
+                </div>
+            <div  style="height: 1px;background-color: gray;left: 10px;width: 60%;margin-bottom: 2px;margin-left: -11px"></div>
+                
+            </div>
+            """.format(href=self.href,con=self.name,content=self.text, img=self.imgs)
+        return t
+
+    def __repr__(self):
+        if not self.name and not self.href:
+            return super().__repr__()
+        if not self.name:
+            return "| " + self.href
+        if not self.href:
+            return self.name 
+        return self.name 
+
+    def find(self,*keys):
+        msg = self.text
+        f = True
+        for key in keys:
+            if key in msg:
+                msg = mark(msg, key, color='white', on='on_green')
+            else:
+                f = True
+        if f:
+            return msg
+        return False
+
+
+
+def faceparse(xml):
+    acc = None
+    try:
+        meta = xml("noscript")[0].text
+        # show(meta)
+
+        f = meta.find("/") + 1
+        acc = meta[f:].split("?")[0]
+        
+
+    except Exception as e:
+        show(e, '|err',color='red')
+
+    for x in xml(".fbUserContent"):
+        if not isinstance(x, Tag):
+            xt = XmlParser(x)
+        else:
+            xt = XmlParser(x.encode())
+        # remove comment
+        xt.remove(".UFIList")
+        xt.remove(".commentable_item")
+        status = xt(".clearfix").text()
+        imgs = xt("img")
+        img_url = ''
+        if len(imgs) > 1:
+            for im in imgs:
+                if isinstance(im, HtmlElement):
+                    if 'width' in im.attrib:
+                        if int(im.attrib['width']) < 50:
+                            continue
+
+                        img_url = im.attrib['src']
+
+                else:
+                    try:
+                        if 'width' in im.attrs:
+                            if int(im.attrs['width']) < 50:
+                                continue
+                            img_url = im.attrs['src']
+                    except AttributeError:
+                        if 'width' in im.attrib:
+                            if int(im.attrib['width']) < 50:
+                                continue
+                            img_url = im.attrib['src']
+
+
+        else:
+            img_url = ''
+
+        
+        try:
+            time = xt("abbr")[0].attrs['title']
+        except AttributeError:
+            time = xt("abbr")[0].attrib['title']
+ 
+        xt.remove(".clearfix")
+    
+        xt.remove(".timestampContent")
+        content = xt.text
+        content += " | " + status + " " + img_url
+        show("acc:", acc,color='green')
+        if acc:
+            # show(acc, time)
+            if acc == 'profile.php':
+                acc = 'None'
+            yield acc, time, content, img_url
+        # else:
+    if acc and acc != 'profile.php':
+        yield acc , '', '', ''
+
+
+def last_fb(xml):
+    lst = ['', '', '', '']
+    for acc, time, content, img_url in faceparse(xml) :
+        if acc:
+            if not content:
+                content = ''
+            return acc, time,content, img_url
+        lst = [acc, time, content, img_url]
+    return lst
+
+
+
+
+def facebook(user,passwd,id, proxy='socks5://127.0.0.1:1080', timeout=30):
+    w = WebDriver(proxy=proxy)
+    show('loging',log=True,k='debug')
+    w.get("https://www.facebook.com")
+    show('login ok',log=True,k='debug')
+    w.type_msg("email",user)
+    w.type_msg("pass",passwd)
+    w.phantom.find_element_by_id('pass').submit()
+    show('loading',log=True,k='debug')
+    w.get('https://www.facebook.com/profile.php?id={id}'.format(id=id),wait_for='recent_capsule_container', timeout=timeout)
+    show(id,'done',log=True,k='info')
+    
+    return w.page
+
+
+
+
+class FaceBookApi(RemoteApi):
+    
+    CONTAINER_VEC = '.fbUserContent'
+    LOCATE_ID_VEC = 'https://www.facebook.com/profile.php?id={id}'
+    INTERVN = 2
+
+    def __init__(self,*args, **kargs):
+        super().__init__(*args, **kargs)
+        self.use_count = 0
+        self.login = {
+            'url':'https://www.facebook.com',
+            'actions':[
+                {
+                    'vec':'email',
+                    'msg':self.user,
+                    'by': 'id'
+                },
+                {
+                    'vec':'pass',
+                    'msg':self.passwd,
+                    'by': 'id'
+                },
+            ]
+        }
+        if 'INTERVN' in kargs:
+            try:
+                FaceBookApi.INTERVN = int(kargs['INTERVN'])
+            except TypeError as e:
+                show("must integer, not ", kargs['INTERVN'])
+
+    def get_by_id(self, id, user=None, passwd=None):
+        
+        url = self.LOCATE_ID_VEC.format(id=id)
+        show("getting",url,log=True,k='debug')
+        if user and passwd:
+            for a in self.login['actions']:
+                if a['vec'] == 'email':
+                    a['msg'] = user
+                elif a['vec'] == 'pass':
+                    a['msg'] = passwd
+
+        if self.use_count == 0:
+            res = self.get(url, method='browser',first=self.login)    
+        else:
+            res = self.get(url, method='browser')
+
+        self.use_count += 1
+        self.use_count %= FaceBookApi.INTERVN
+
+
+        return res
+        # if res:
+            # return res(self.CONTAINER_VEC)
+
+    def get_by_ids(self, *id):
+        pass
+
+    def api(self, acc_file, ids_file, spider_file):
+        accs = [i.strip() for i in open(acc_file).readlines() if i.strip()]
+        spider_file = [i.strip() for i in open(spider_file).readlines() if i.strip()]
+
+
+        
+
+
+
+def res(idstr, acc, time, content, img_url):
+    if not content and not time and not acc:
+        show("[",idstr,"|",acc,"]", "no posted ",color='red')
+        return
+    sql = SqlEngine(database='./db.sql')
+    # show(idstr, time, content)
+    
+    if not content:
+        content = ''
+    
+    if not time:
+        time = ''
+
+
+
+    if not sql.first('tmp_db',idstr=idstr, pubtime=time):
+        try:
+            sql.insert("tmp_db",['idstr', 'acc', 'pubtime', 'content', 'content_img'],idstr, acc, time, content, img_url)
+            show(idstr,"-> " , "db.sql", color='yellow')
+
+        except Exception as e:
+            show("may be account error")
+    
+
+def req(u, p, id, remote_url):
+    show(remote_url)
+    face = FaceBookApi(u, p, remote_url)
+    acc, time, content, img_url = last_fb(face.get_by_id(id))
+    return id, acc,time, content, img_url
+
+
+def map_fb(id_f, acc_f, remote_url, spide_f=None):
+    sql = SqlEngine(database='./db.sql')
+    stdout = sys.stdout
+    sys.stdout = open('err.log','w')
+    try:
+        sql.create("tmp_db",idstr=str,acc=str,pubtime=str, content=str, content_img=str)
+    except:
+        pass
+    finally:
+        sys.stdout = stdout
+
+    
+    lines = [i.strip() for i in open(id_f).readlines() if i.strip()]
+    user_pass = [i.strip() for i in open(acc_f).readlines() if i.strip()]
+    if spide_f:
+        spider_host = [i.strip() for i in open(spide_f).readlines() if i.strip()]
+
+    exe = Exe(10)
+
+    for i,id in enumerate(lines):
+        if not id:
+            continue
+        if sql.first('tmp_db',idstr=id):
+            show(id, '[T]', a=['underline'])
+            continue
+
+        u,p = user_pass[i%len(user_pass)].split()
+        if spide_f:
+            remote_url = spider_host[i % len(spider_host)]
+
+        show("loading :", colored(id, attrs=['underline']))
+        exe.done(req, res, u, p, id, remote_url)
+
+    exe.exe.shutdown()
+
+def merge(f1,f2):
+    f3 = '-'.join([f1,f2])
+    
+    sets = set()
+
+    for f in [f1,f2]:
+        sql = SqlEngine(database=f)
+        for i in sql.select("tmp_db", "idstr",'acc',"pubtime","content", "content_img"):
+            sets.add(i)
+
+    show(f1,f2," ==> ", f3)
+    sql = SqlEngine(database=f3)
+    sql.create("tmp_db",idstr=str,acc=str,pubtime=str, content=str, content_img=str)
+    for v,i in enumerate(sets):
+        sql.insert('tmp_db',['idstr', 'acc', 'pubtime', 'content', 'content_img'], *i)
+        L('->',v,end='\r')
+    for f in [f1, f2]:
+        if f.endswith('db.sql'):
+
+            os.rename(f, f+".bak")
+    os.rename(f3, 'db.sql')
+
+def output(f, inf='./db.sql'):
+    sql = SqlEngine(database=inf)
+    res = {}
+    for id,acc, time,con, img_url in  sql.select("tmp_db", "idstr",'acc',"pubtime","content", "content_img"):
+        res[id] = {
+            'time':time,
+            'con':con,
+            'acc':acc,
+            'img':img_url,
+        }
+
+    show(res, log=True, k='debug')
+    with open(f, 'w') as fp:
+        json.dump(res, fp, ensure_ascii=False)
+
+def test_host(spide_hosts_f):
+    spide_hosts = [i.strip() for i in open(spide_hosts_f).readlines() if i.strip]
+    Ex = Exe(10)
+    def req(u):
+        try:
+            return u,to(u)
+        except Exception:
+            return u,None
+
+    def res(ur,res):
+        if not res:
+            show(ur, 'refuse access!', color='red')
+            return
+
+        if res.status_code == 200:
+            show(ur,'ok', color='green',a=['underline'])
+        else:
+            show(ur, 'check', color='yellow')
+
+    for i in spide_hosts:
+        Ex.done(req,res, i)
+    Ex.exe.shutdown()
+
+
+
+    # if args.out
+
+def KeyWords(*keys, timestamp=None):
+    # show(url, *keys)
+    g = Google(driver=RemoteApi())
+    res = g.search(' '.join(keys), time=timestamp)
+    for i in res:
+        res = i.find(*keys)
+        if res:
+            yield i,res
+
+def check(url_files, *keys, inter=40, timestamp=None):
+    urls = [i.strip() for i in open(url_files).readlines() if i.strip()]
+    sc = time.time()
+    try:
+        while 1:
+            if time.time() - sc >= inter:
+                spide = random.choice(urls)
+                show(spide)
+                sql = SqlEngine(database='./db.sql')
+                for g,g_msg in KeyWords(spide, *keys, timestamp=timestamp):
+                    # show(colored(g.href, attrs=['underline']))
+                    
+                    c = g.name
+                    if sql.first('db', msg=c):
+                        continue
+                    sql.insert('db',['msg'], c)
+                    show(time.asctime(),g_msg, )
+                    # print("\a\a\a\a\a")
+                    os.system("play ring.mp3 ")
+                    webbrowser.open_new_tab("https://www.google.com"+ g.href)
+                # os.system('echo \'{}\' >> {} '.format(c, '-'.join(keys)))
+                sc = time.time()
+            # print("\n")
+
+            time.sleep(1)
+            show('-->', time.asctime(),attrs=['bold'], end='\r')
+    except KeyboardInterrupt as e:
+        show("bye~~")
+
+
+
+
+class Cli(Cmd):
+
+    def __init__(self):
+        super().__init__()
+        self.timestamp = ''
+        self.prompt = colored("> ","red")
+        self.tmp_db = []
+        
+
+
+    def deal_options(self, choice):
+        if choice == "-1":
+            yield -1
+        else:
+            every = "".join(re.findall(r"[ ,\-\d]",choice)).split()
+            for s in every:
+                if '-' in s:
+                    s,e = s.split("-")
+                    for i in range(int(s),int(e)+1):
+                        yield i
+                elif "," in s:
+                    for i in  s.split(","):
+                        yield int(i)
+                else:
+                    yield int(s)
+
+
+    def do_quit(self,args):
+        return True
+
+    def do_settime(self, args):
+            
+        setattr(self, 'timestamp', args)
+        if self.timestamp:
+            self.prompt = colored(self.timestamp+ "| >", "red", attrs=['underline'])
+
+    def do_search(self, arg):
+        c = 0
+        self.tmp_db = []
+        tmps = []
+        for g,g_msg in KeyWords(*arg.split(), timestamp=self.timestamp):
+                    # show(colored(g.href, attrs=['underline']))
+                    
+                    # c = g.name
+                    # if sql.first('db', msg=c):
+                        # continue
+                    # sql.insert('db',['msg'], c)
+                    self.tmp_db.append(g)
+                    tmps.append([g, g_msg])
+                    # print("\a\a\a\a\a")
+                    # os.system("play ring.mp3 ")
+                    # webbrowser.open_new_tab("https://www.google.com"+ g.href)
+                    c += 1
+        tmps.reverse()
+        for g,g_msg in tmps:
+                    c -= 1
+                    L("-" * (LogControl.SIZE[1] - 7), color='red', attrs=['bold'])
+                    show(c,colored(g.name,attrs=['bold','underline']), g_msg )
+    def do_open(self, id):
+        try:
+            i = int(id)
+        except Exception as e:
+            cprint("must be int ","error")
+            return
+        webbrowser.open_new_tab("https://www.google.com"+ self.tmp_db[i].href)
+
+    def complete_open(self, text, line , begidx, endidx):
+        try:
+            i = int(text.strip())
+        except Exception as e :
+            return []
+        if i  < len(self.tmp_db):
+            gg = self.tmp_db[i]
+            row = LogControl.SIZE[0]
+            L("("+gg.name+"|"+gg.href+")",color='blue',r=0,c=0)
+
+
+
+    def complete_settime(self, text, line, begidx, endidx):
+        if not text:
+            return ['H', 'Y', 'M', 'D']
+        
+        tt = time.gmtime()
+        
+        times = [str(tt.tm_year),str(tt.tm_mon),str(tt.tm_mday),str(tt.tm_hour)]
+        
+            
+        # L(text, color="green", end='')
+        
+        # print(text, end='')
+        for ts in times:
+            if text in ts:
+                return [ts]
+        # print(text)
+        # if text:
+        #     w = text.split()
+        #     if len(w) == 1:
+        #         with L.jump(L.SIZE[0],0):
+        #             for i in self.opts:
+        #                 if text in i:
+        #                 # L.cl()
+        #                     print(colored(i +" = " + getattr(self,i), "green"),end='')
+        #                     sys.stdout.flush()
+        #                     return [i]
+        
+        
+        
+
+        
+
+
+
+
+def main():
+    args = GeneratorApi({
+        'apis':'input set here can use single id or file',
+        'keys':'keywords set to found in google',
+        'check': (False,'check urls'),
+        'time': 'set time stamp, exm: "2017-7-10  2017-7-14" or  "H" or "D" or "M"  or "Y" [mean pass Hour/Day/Month/year] ',
+        'out': (False,'out file path default is use \'keys\''),
+        'shell': (False, 'interact mode to use google'),
+    })
+    url_files = args.apis
+    if args.shell:
+        c = Cli()
+        c.cmdloop()
+        sys.exit(0)
+
+    if not os.path.exists(url_files):
+        show("not found file:", url_files)
+        sys.exit(0)
+
+    if args.check:
+        urls = ['http://' + i.strip() + '/urlapi' for i in open(url_files).readlines() if i.strip()]
+        for i in net_patch(urls):
+            show(i.url, i.status_code)
+        sys.exit(0)
+
+    if args.keys:
+        check(url_files, *args.keys.split(), timestamp=args.time)
+    
+
+if __name__ == '__main__':
+    main()
+

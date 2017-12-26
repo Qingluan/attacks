@@ -1,0 +1,31 @@
+#!/usr/bin/env python3 
+
+import os,sys
+from qlib.io import GeneratorApi
+from cdn import check,shows, list_ip
+
+args = GeneratorApi({
+    'Url':'url to test',
+    'list': (False,'list the cdn results'),
+    'mode': '[s/i]',
+    'options': 'r/d',
+})
+if args.list:
+    for f in os.listdir("/opt/attacks/cdn-test/res_db"):
+        list_ip(f.split(".db")[0])
+#    list_ip()
+    sys.exit(0)
+
+if not  args.Url:
+    sys.exit(0)
+
+
+if args.mode == 's':
+    shows(args.Url, args.options)
+else:
+    check(args.Url)
+    shows(args.Url, 'd')
+
+
+
+

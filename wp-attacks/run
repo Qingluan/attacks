@@ -1,0 +1,70 @@
+#!/bin/bash
+# this is attack script generate by Halo;
+# you can edit this;
+
+function usage {
+echo  "Usage: H [options] term1 [term2] ... [termN]                                         "
+echo  "  ==========                                                                         "
+echo  "   Examples                                                                          "
+echo  "  ==========                                                                         "                                                                                           
+echo  "                                                                                     "
+echo  "  =========                                                                          "
+echo  "   Options                                                                           "
+echo  "  =========                                                                          "
+echo  "     -h, --help                              Show this help screen.                  "
+echo  "  ========================== Payload ===========================================     "
+echo  "      -x, --xxx 	                          xxxxxxx                                   "
+
+}
+
+
+ATTACK_HOME=/opt/attacks;
+PRO_HOME=$ATTACK_HOME/wp-attacks/;
+PRO_RES=$PRO_HOME/res/;
+
+
+function run_py2 {
+    cat << EOF2 | python
+#!/usr/bin/env python2
+$*
+EOF2
+
+}
+
+function run_py3 {
+    cat << EOF3 | python
+#!/usr/bin/env python3
+$*
+EOF3
+}
+
+function msg {
+    read -a  arg <<< "$*";
+    # echo wp-attacks
+    # echo 1
+    if [ $# -eq 2 ];
+    then
+        if [[ $1 == *[!0-9]*  ]];then
+            printf " \033[0;32m[+\033[0;32m]\033[0m \033[0m%s\n"   "$*";
+        else
+            if [ $1 -eq 0 ];then
+                printf " \033[0;32m[Run\033[0;32m] \033[0m%s\n"   "$2";
+            else
+                printf " \033[0;31m[Fail\033[0;31m] \033[0m%s\n"   "$2"; 
+            fi
+        fi
+    else
+        printf " \033[0;34m[+\033[0;34m] \033[0;36m%s\033[0m\n"   "$*";
+    fi
+}
+ARGS="$*";
+if [[ $ARGS != "" ]];then
+  while getopts "h:" arg ${ARGS} ; do
+    if [[ "${arg}" = "?" ]]; then
+      usage >&2;
+    fi     
+    case ${arg} in
+      h) usage >&2;;
+    esac   
+  done     
+fi
